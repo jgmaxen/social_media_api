@@ -1,5 +1,4 @@
 import express from 'express';
-// Run npm install mongodb and require mongodb and MongoClient class
 import { MongoClient } from 'mongodb';
 
 const app = express();
@@ -14,42 +13,75 @@ const client = new MongoClient(connectionStringURI);
 // Create variable to hold our database name
 const dbName = 'socialNetwork';
 
-// Use connect method to connect to the mongo server
-await client.connect()
-.catch(err => {console.log(err)});
+// Function to connect to MongoDB and start the server
+const startServer = async () => {
+    try {
+        await client.connect();
+        console.log('✅ Connected to MongoDB successfully!');
+        
+        const db = client.db(dbName);
 
-const db = client.db(dbName);
+        // Built-in Express middleware to parse incoming JSON requests
+        app.use(express.json());
 
-// Built in Express function that parses incoming requests to JSON
-app.use(express.json());
+        // ✅ **POST /users** → Add a new user
+        app.post('/users', async (req, res) => {
+            try {
+                const results = await db.collection('users').insertOne({
+                    username: req.body.username,
+                    email: req.body.email,
+                    thoughts: req.body.thoughts || [],
+                    friends: req.body.friends || [],
+                });
+                res.status(201).json(results);
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
 
-app.post('/people', async (req, res) => {
-  try {
-    // Use db connection to add a document
-    const results = await db.collection('userCollection').insertOne(
-      { thoughts: req.body.thoughts, reactions: req.body.reactions, friends: req.body.friends, users: req.body.users }
-    )
-    res.status(201).json(results);
-  }
-  catch (error) {
-    res.status(500).json({ error });
-  }
-});
+        // ✅ **GET /users** → Retrieve all users
+        app.get('/users', async (_req, res) => {
+            try {
+                const results = await db.collection('users').find().toArray();
+                res.status(200).json(results);
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
 
-app.get('/pets', async (_req, res) => {
-  try {
-    // Use db connection to find all documents in collection
-    const results = await db.collection('petCollection')
-      .find()
-      .toArray()
+        // ✅ **POST /thoughts** → Add a new thought (post)
+        app.post('/thoughts', async (req, res) => {
+            try {
+                const results = await db.collection('thoughts').insertOne({
+                    userId: req.body.userId,
+                    content: req.body.content,
+                    reactions: req.body.reactions || [],
+                });
+                res.status(201).json(results);
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
 
-    res.status(200).json(results);
-  }
-  catch (error) {
-    res.status(500).json({ error });
-  }
-});
+        // ✅ **GET /thoughts** → Retrieve all thoughts (posts)
+        app.get('/thoughts', async (_req, res) => {
+            try {
+                const results = await db.collection('thoughts').find().toArray();
+                res.status(200).json(results);
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
 
-app.listen(PORT, () => {
-  console.log(`Example app listening at http://localhost:${PORT}`);
-});
+        // Start the server **only after MongoDB is connected**
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running at http://localhost:${PORT}`);
+        });
+
+    } catch (err) {
+        console.error('❌ Error connecting to MongoDB:', err);
+    }
+};
+
+// **Start the server**
+startServer();
