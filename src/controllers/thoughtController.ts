@@ -2,7 +2,7 @@ import Thought from '../models/thought.js'
 import User from '../models/user.js'
 import { Request, Response } from 'express';
 
-
+//get thoughts
 export const getThoughts = async (_req: Request, res: Response) => {
     try {
         const thoughts = await Thought.find();
@@ -58,6 +58,25 @@ export const updateThought = async (req: Request, res: Response) => {
     }
 }
 
+//delete thought
+export const deleteThought = async (req: Request, res: Response) => {
+    try {
+        const thought = await Thought.findOneAndDelete(
+            { _id: req.params.thoughtId },
+            { new: true }
+        );
+
+        if (!thought) {
+            res.status(404).json({ message: "No thought found with that ID!" });
+            return;
+        } else {
+            res.json({ message: "Thought deleted!", deleteThought: thought })
+        }
+    } catch (err) {
+        res.status(500).json(err)
+    }
+}
+
 // Create a new reaction for a specific thought
 export const createReaction = async (req: Request, res: Response) => {
     try {
@@ -81,7 +100,7 @@ export const createReaction = async (req: Request, res: Response) => {
     }
 };
 
-// Delete reaction from a thought
+// Delete a reaction from a thought
 export const deleteReaction = async (req: Request, res: Response) => {
     try {
         const thought = await Thought.findByIdAndUpdate(

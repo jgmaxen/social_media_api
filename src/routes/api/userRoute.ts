@@ -1,12 +1,13 @@
 import { Router } from 'express';
 const router = Router();
-import { 
-  getSingleUsers, 
-  getUsers, 
-  createFriend, 
-  createUser, 
-  deleteFriend, 
+import {
+  getSingleUsers,
+  getUsers,
+  createFriend,
+  createUser,
+  deleteFriend,
   updateUser,
+  removeUser,
 } from '../../controllers/userController.js';
 
 //  Define routes
@@ -16,8 +17,9 @@ router.route('/')
 
 //  Route to get & update a single user by ID
 router.route('/:userId')
-  .get(getSingleUsers)  
-  .put(updateUser);     
+  .get(getSingleUsers)
+  .put(updateUser)
+  .delete(removeUser);
 
 //  Add and remove a friend
 router.route('/:userId/friends/:friendId')

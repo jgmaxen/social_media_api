@@ -1,9 +1,9 @@
 import User from '../models/user.js';
 import { Request, Response } from 'express';
-
+import Thought from '../models/thought.js';
+import mongoose from 'mongoose';
 // Get all users
 export const getUsers = async (_req: Request, res: Response) => {
-  console.log('get users')
   try {
     const users = await User.find();
     res.json(users);
@@ -44,29 +44,53 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUser = async (req: Request, res: Response) => {
+export const removeUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findOneAndUpdate(
-      { _id: req.params.userId }, // Find user by ID
-      { $set: req.body }, // Update fields
-      { new: true, runValidators: true } // Return updated user & validate input
-    );
+    const userId = req.params.userId;
+
+    // Validate the userId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const user = await User.findOneAndDelete({ _id: userId });
 
     if (!user) {
       return res.status(404).json({ message: 'No user found with that ID' });
     }
 
-    return res.json({ message: 'User updated successfully', user });
-  } catch (err: unknown) {
-    // ✅ Type-safe error handling
-    let errorMessage = 'Server error';
-    if (err instanceof Error) {
-      errorMessage = err.message;
+    // Delete associated thoughts if they exist
+    if (user.thoughts && Array.isArray(user.thoughts) && user.thoughts.length > 0) {
+      await Thought.deleteMany({ _id: { $in: user.thoughts } });
     }
 
-    return res.status(500).json({ error: errorMessage });
+    return res.json({ message: 'User and their thoughts have been deleted!' });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err });
   }
 };
+
+//update a thought
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.userId },
+      { $set: req.body },
+      { new: true, runValidators: true },
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'Could not update user!' })
+    }
+
+    res.json(user);
+    return;
+  } catch (err) {
+    res.status(500).json(err);
+    return;
+  }
+}
+
 // Create a new friend
 export const createFriend = async (req: Request, res: Response) => {
   try {
@@ -88,7 +112,7 @@ export const createFriend = async (req: Request, res: Response) => {
   }
 };
 
-// Delete  friend by ID
+// Delete a friend by ID
 export const deleteFriend = async (req: Request, res: Response) => {
   try {
     const user = await User.findOneAndUpdate(
